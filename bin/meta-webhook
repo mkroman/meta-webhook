@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'puma'
+
+require_relative '../lib/meta/webhook'
+
+# Reads a secret from a given environment variable +name+.
+#
+# It will first attempt to read a file defined by the variable <name>_FILE, but
+# if that variable doesn't exist, it will try to read the variable <name>.
+def env_secret name
+  if (path = ENV["#{name}_FILE"])
+    if File.readable? path
+      return File.read(path).strip
+    else
+      raise "The file pointed to by #{name}_FILE is not readable!"
+    end
+  end
+
+  ENV[name]
+end
+
+rpc_url = ENV['META_RPC_URL'] or raise 'missing META_RPC_URL'
+
+app = Meta::Webhook::Application
+
+app.set :rpc_url, rpc_url
+app.set :rpc_secret, env_secret('META_RPC_SECRET')
+
+app.run!
